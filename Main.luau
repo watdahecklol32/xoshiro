@@ -35,7 +35,7 @@ end;
 	--warn(buffer.readu32(state, 1) * 5);
 
 	local result: number = (bit32.lrotate(buffer.readu32(state, 1)*5, 7) * 9);
-	local t: number = bit32.rshift(buffer.readu32(state, 1), 17);
+	local t: number = bit32.lshift(buffer.readu32(state, 1), 17);
 	--warn("what am i doing wrong", result);
 
 	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 1), buffer.readu32(state, 2)));
