@@ -59,23 +59,4 @@ end;
 	return (min + shift.random_int() % max);
 end;
 
-local demo_options: {[string]: any} = {
-	random_num = false;
-	loop_num = 100;
-	math_random = true;
-};
-
-print("Starting demo");
 shift.newseed(os.clock());
-
---print("wtf", shift.state);
-
-if (demo_options.random_num) then
-	for i: number = 1, demo_options.loop_num do
-		warn("random num", shift.random_int());
-	end;
-elseif (demo_options.math_random) then
-	for i: number = 1, (demo_options.loop_num) do
-		warn("math.random test", shift.random(1, 100));
-	end;
-end;
