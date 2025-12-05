@@ -3,8 +3,6 @@
 --!optimize 2
 
 local shift = {state = nil :: buffer?};
-local switch_seed: boolean = false;
-
 local split = @native function(state: number): buffer
 	local state_bfr: buffer = buffer.create(10);
 	buffer.writeu32(state_bfr, 1, state + 0x7f4A7C15);
@@ -29,25 +27,19 @@ end;
 
 	return state;
 end;
-
 @native function shift.random_int(): number
 	local state: buffer = (shift.state or shift.start(os.clock()))
-	--warn(buffer.readu32(state, 1) * 5);
-
 	local result: number = (bit32.lrotate(buffer.readu32(state, 1)*5, 7) * 9);
-	local t: number = bit32.lshift(buffer.readu32(state, 1), 17);
-	--warn("what am i doing wrong", result);
 
+	local t: number = bit32.lshift(buffer.readu32(state, 1), 17);
 	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 1), buffer.readu32(state, 2)));
+
 	buffer.writeu32(state, 3, bit32.bxor(buffer.readu32(state, 3), buffer.readu32(state, 1)));
 	buffer.writeu32(state, 1, bit32.bxor(buffer.readu32(state, 1), buffer.readu32(state, 2)));
 
 	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 2), t));
 	buffer.writeu32(state, 3, bit32.lrotate(buffer.readu32(state, 3), 45));
 	
-	--[[if (switch_seed) then
-		shift.newseed(os.clock()); -- meh
-	end;]]
 	return result;
 end;
 
