@@ -3,6 +3,8 @@
 --!optimize 2
 
 local shift = {state = nil :: buffer?};
+local number_limit: number = 0xFFFFFFFF;
+
 local split = @native function(state: number): buffer
 	local state_bfr: buffer = buffer.create(10);
 	buffer.writeu32(state_bfr, 1, state + 0x7f4A7C15);
@@ -39,7 +41,7 @@ end;
 
 	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 2), t));
 	buffer.writeu32(state, 3, bit32.lrotate(buffer.readu32(state, 3), 45));
-	
+
 	return result;
 end;
 
@@ -48,7 +50,16 @@ end;
 	return;
 end;
 @native function shift.random(min: number, max: number): number
-	return (min + shift.random_int() % max);
+	local range: number = (max - min + 1);
+	if (range <= 0) then
+		return min;
+	end;
+	
+	local result: number = shift.random_int();
+	result = (bit32.band(result, number_limit));
+	
+	
+	return (min + (result % range));
 end;
 
 shift.newseed(os.clock());
