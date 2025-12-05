@@ -49,17 +49,21 @@ end;
 	shift.state = shift.start(seed) :: buffer;
 	return;
 end;
-@native function shift.random(min: number, max: number): number
-	local range: number = (max - min + 1);
+
+@native function shift.random(min: number, max: number?): number
+	max = (max or 0);
+	local range = (max - min +1);
+	
 	if (range <= 0) then
 		return min;
 	end;
+	local output: buffer = buffer.create(12);
 	
-	local result: number = shift.random_int();
-	result = (bit32.band(result, number_limit));
-	
-	
-	return (min + (result % range));
+	buffer.writeu32(output, 1, bit32.band(shift.random_int(), number_limit));
+	return (min + (buffer.readu32(output, 1) % range));
 end;
-
 shift.newseed(os.clock());
+
+for i: number = 1, 30 do
+	warn(shift.random(1, 10000));
+end;
