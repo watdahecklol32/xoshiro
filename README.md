@@ -1,1 +1,1 @@
-## A basic implementation of the xoshiro in LuaU
+## A basic implementation of xoshiro pseudorandom number generator (PRNG) in LuaU
