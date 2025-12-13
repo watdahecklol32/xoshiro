@@ -1,71 +1,56 @@
 --!strict
 --!native
 --!optimize 2
-
-local shift = {state = nil :: buffer?};
-local number_limit: number = 0xFFFFFFFF;
-
-local split = @native function(state: number): buffer
-	local state_bfr: buffer = buffer.create(10);
-	buffer.writeu32(state_bfr, 1, (state + 0x7f4A7C15));
-
-	buffer.writeu32(state_bfr, 2, bit32.bxor(buffer.readu32(state_bfr, 1), bit32.rshift(buffer.readu32(state_bfr, 1), 30)));
-	buffer.writeu32(state_bfr, 3, (buffer.readu32(state_bfr, 2) * 0x1CE4E5B9));
-
-
-	buffer.writeu32(state_bfr, 4, bit32.bxor(buffer.readu32(state_bfr, 3), bit32.rshift(buffer.readu32(state_bfr, 3), 27)));
-	buffer.writeu32(state_bfr, 5, (buffer.readu32(state_bfr, 4) * 0x133111EB));
-
-	buffer.writeu32(state_bfr, 6, bit32.bxor(buffer.readu32(state_bfr, 4), bit32.rshift(buffer.readu32(state_bfr, 5), 31)));
-	return state_bfr;
+local split: (num: number) -> number = @native function(num: number): number
+	num += 0x7f4A7C15 :: number;
+	num = bit32.bxor(num, bit32.rshift(num, 30)) :: number;
+	
+	num = num * 0x1CE4E5B9 :: number;
+	num = bit32.bxor(num, bit32.rshift(num, 27)) :: number;
+	
+	num = bit32.bxor(num, bit32.rshift(num, 5), 31) :: number;
+	return num;
 end;
 
-@native function shift.start(seed: number): buffer
-	local state: buffer = buffer.create(12);
-	buffer.writeu32(state, 1, buffer.readu32(split(seed), 6));
+local generate_int: (prng_state: buffer) -> number =  @native function(prng_state: buffer): number
+	local state0: number = buffer.readu32(prng_state, 0);
+	local state1: number = buffer.readu32(prng_state, 1);
+	
+	local state2: number = buffer.readu32(prng_state, 2);
+	local t: number = bit32.lshift(state0, 17);
 
-	buffer.writeu32(state, 2, buffer.readu32(split(buffer.readu32(state, 1)), 6));
-	buffer.writeu32(state, 3, buffer.readu32(split(buffer.readu32(state, 2)), 6));
-
-	return state;
-end;
-@native function shift.random_int(): number
-	local state: buffer = (shift.state or shift.start(os.clock()))
-	local result: number = (bit32.lrotate(buffer.readu32(state, 1)*5, 7) * 9);
-
-	local t: number = (bit32.lshift(buffer.readu32(state, 1), 17));
-	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 1), buffer.readu32(state, 2)));
-
-	buffer.writeu32(state, 3, bit32.bxor(buffer.readu32(state, 3), buffer.readu32(state, 1)));
-	buffer.writeu32(state, 1, bit32.bxor(buffer.readu32(state, 1), buffer.readu32(state, 2)));
-
-	buffer.writeu32(state, 2, bit32.bxor(buffer.readu32(state, 2), t));
-	buffer.writeu32(state, 3, bit32.lrotate(buffer.readu32(state, 3), 45));
-
+	state1 = bit32.bxor(state0, state1) :: number;
+	state2 = bit32.bxor(state2, state0) :: number;
+	
+	state0 = bit32.bxor(state0, state1) :: number;
+	state1 = bit32.bxor(state1, t) :: number;
+	
+	state2 = bit32.lrotate(state2, 45) :: number;
+	buffer.writeu32(prng_state, 0, state0);
+	
+	buffer.writeu32(prng_state, 1, state1);
+	buffer.writeu32(prng_state, 2, state2);
+	
+	local result: number = (bit32.lrotate(state2*5, 7) * 9);
 	return result;
 end;
-
-@native function shift.newseed(seed: number): ()
-	shift.state = shift.start(seed) :: buffer;
-	return;
+local random: (prng_state: buffer, min: number, max: number) -> number = @native function(prng_state: buffer, min: number, max: number): number
+	local result: number = generate_int(prng_state);
+	return bit32.band(min + result % max-min+1, 0xFFFFFFFF);
 end;
 
-@native function shift.random(min: number, max: number?): number
-	max = (max or 0);
-	local range = (max - min +1);
+local seed: (operand: number) -> buffer = @native function(operand: number): buffer
+	local prng_state: buffer = buffer.create(12);
+	buffer.writeu32(prng_state, 0, split(operand));
+	
+	buffer.writeu32(prng_state, 1, split(buffer.readu32(prng_state, 0)));
+	buffer.writeu32(prng_state, 2, split(buffer.readu32(prng_state, 1)));
+	
+	return prng_state;
+end
 
-	if (range <= 0) then
-		return min;
-	end;
-	local output: buffer = buffer.create(12);
-
-	buffer.writeu32(output, 1, bit32.band(shift.random_int(), number_limit));
-	return (min + (buffer.readu32(output, 1) % range));
-end;
-shift.newseed(os.clock());
-
---[[local tbl = {"hi", "no", "bad"};
-for i: number = 1, 30 do
-	print("math.random", tbl[math.random(1, #tbl)]);
-	warn("shift", tbl[shift.random(1, #tbl)]);
-end;]]
+return table.freeze({
+	generate_int = generate_int;
+	random = random;
+	seed = seed;
+});
