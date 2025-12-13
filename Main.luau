@@ -41,13 +41,18 @@ end;
 
 local seed: (operand: number) -> buffer = @native function(operand: number): buffer
 	local prng_state: buffer = buffer.create(12);
-	buffer.writeu32(prng_state, 0, split(operand));
+	local state0: number = split(operand);
 	
-	buffer.writeu32(prng_state, 1, split(buffer.readu32(prng_state, 0)));
-	buffer.writeu32(prng_state, 2, split(buffer.readu32(prng_state, 1)));
+	local state1: number = split(state0);
+	local state2: number = split(state1);
 	
+	buffer.writeu32(prng_state, 0, state0);
+	buffer.writeu32(prng_state, 1, state1);
+	
+	buffer.writeu32(prng_state, 2, state2);
 	return prng_state;
-end
+end;
+
 
 return table.freeze({
 	generate_int = generate_int;
