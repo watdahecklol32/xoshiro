@@ -1,1 +1,1 @@
-# xoshiro
+Not recommended for conventional uses
